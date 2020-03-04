@@ -5,14 +5,12 @@ from typing import List, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.compiler.transpile import _parse_transpile_args
 from qiskit.providers import basebackend
-from qiskit.transpiler import Layout, CouplingMap, PassManager
+from qiskit.transpiler import Layout, PassManager
 from qiskit.transpiler.basepasses import BasePass
-from qiskit.transpiler.passes import *
 from qiskit.transpiler.preset_passmanagers import *
 from qiskit.transpiler.transpile_config import TranspileConfig
 
-from qls.circuits import TestCircuit
-
+from qisquick.circuits import TestCircuit
 """
 Module of unbound helper functions to integrate into the Qiskit transpiler workflow.
 

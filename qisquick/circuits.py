@@ -1,24 +1,23 @@
 from __future__ import annotations
 
-import itertools
 import math
 import random
 import time
 
 import numpy as np
 
-import qls.dbconfig as dbc
+import qisquick.dbconfig as dbc
 
 from datetime import datetime
-from typing import Union, List
+from typing import List, Union
 
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, IBMQ, transpile, execute, Aer
 from qiskit.providers import basebackend
 from qiskit.providers.jobstatus import JobStatus
 from qiskit.transpiler import PassManager
 
-from qls.statblock import Statblock
-from qls.qis_logger import get_module_logger
+from qisquick.statblock import Statblock
+from qisquick.qis_logger import get_module_logger
 
 logger = get_module_logger(__name__)
 preferred_backend: str = 'ibmq_poughkeepsie'
@@ -316,7 +315,7 @@ class TestCircuit:
 
     @staticmethod
     def run_all_tests(tests: Union[List[TestCircuit], List[QuantumCircuit], TestCircuit, QuantumCircuit],
-                      pass_manager=None, generate_compiled: bool = True,
+                      pass_manager: Union[PassManager, List[PassManager]] = None, generate_compiled: bool = True,
                       be: str = preferred_backend, attempts: int = 1) -> None:
         """ Given a circuit or list of circuits to execute, it executes all of them and writes all results to the
             appropriate db.  Depending on parameters, a custom PassManager can be used, and the circuits will also be

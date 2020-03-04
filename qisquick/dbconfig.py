@@ -1,13 +1,12 @@
-import logging
 import pickle
 import sqlite3
 import traceback
 
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
-from qls.circuits import TestCircuit
-from qls.statblock import Statblock
-from qls.qis_logger import get_module_logger
+from qisquick.circuits import TestCircuit
+from qisquick.statblock import Statblock
+from qisquick.qis_logger import get_module_logger
 
 logger = get_module_logger(__name__)
 
@@ -213,7 +212,7 @@ def record_exists(db: str, uuid: str) -> bool:
         if conn: conn.close()
 
 
-def write_stats(db: str, ids: List[str]) -> None:
+def write_stats(db: str, ids: Iterable[str]) -> None:
     conformed_list = [(uuid,) for uuid in ids]
     circs = []
     try:
