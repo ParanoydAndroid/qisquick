@@ -16,15 +16,26 @@ from qiskit.providers import basebackend
 from qiskit.providers.jobstatus import JobStatus
 from qiskit.transpiler import PassManager
 
+from qisquick.run_experiment import PREFERRED_BACKEND
 from qisquick.statblock import Statblock
 from qisquick.qis_logger import get_module_logger
 
 logger = get_module_logger(__name__)
-preferred_backend: str = 'ibmq_poughkeepsie'
+preferred_backend: str = PREFERRED_BACKEND
 
 
 class Premades(QuantumCircuit):
-    def __init__(self, size: int, truth_value: int, measure: bool = True):
+    def __init__(self, size: int, truth_value: int, measure: bool = True, seed: int = None):
+        """ Creates a Premades object that wraps QuantumCircuits to carry additional information.  Most important is
+            that the PreMades object stores the uniform interface parameters for generating new circuits.
+
+        Args:
+            size (int): Width of the desired circuit.  i.e. the register size of the quantum register defining it.
+            truth_value (int): An inteeger to encode in any oracles that the circuit uses.  Usually used to define
+                the "right" value for the circuit to return.  E.g. the correct value for a grover's search to find.
+            measure (bool): Optional. If True, adds measurement operators to the end of the circuit.
+            seed (int): Optional.  If not None, the provided seed is used to set random state for reproducibility.
+        """
         if truth_value == 0:
             logger.warning('Truth values that evaluate to basis 00 ... 00 may cause misleading accuracy measurements')
 
@@ -35,6 +46,7 @@ class Premades(QuantumCircuit):
         self.circ_size = size
         self.truth_value = truth_value
         self.meas = measure
+        self.seed = seed
 
     @property
     def qr(self):
@@ -64,7 +76,9 @@ class Premades(QuantumCircuit):
         size = self.circ_size
         candidates = tuple(range(size))
 
-        for i in range(1):  # TODO assess whether the condition should be static or 'size'
+        self._get_random_input_state(self.seed)
+
+        for i in range(self.circ_size):  # TODO assess whether the condition should be static or 'size'
             for candidate in candidates:
                 num_connections = random.randint(0, 5)
                 connections = set()
@@ -121,6 +135,8 @@ class Premades(QuantumCircuit):
 
     def islands(self) -> None:
         size = self.circ_size
+
+        self._get_random_input_state(self.seed)
 
         # We use the islands set to ensure different qubits are picked as the 'hubs' across layers.
         # This is distinct from the 'used' set which just ensures we don't pick the same qubit twice in the same layer.
@@ -215,7 +231,7 @@ class Premades(QuantumCircuit):
         If not 3 | size, then some qubits will not be used in each layer"""
 
         size = self.circ_size
-        self.get_random_input_state()
+        self._get_random_input_state(self.seed)
 
         remainder = size % 3
         for layer in range(size):
@@ -248,7 +264,7 @@ class Premades(QuantumCircuit):
             self.h(i)
             self.u1(-math.pi / float(2 ** i), i)
 
-    def get_random_input_state(self, seed: int = None) -> None:
+    def _get_random_input_state(self, seed: int = None) -> None:
         """ Randomizde the input state of a circuit"""
 
         random.seed(seed)
@@ -275,18 +291,18 @@ class Premades(QuantumCircuit):
 
 
 class TestCircuit:
-    def __init__(self, circuit: Union[Premades, QuantumCircuit, None] = None):
+    def __init__(self):
         self.stats = Statblock(parent=self)
-        self.circuit = None
         self.compiled_circ = None
         self.backend = None
         self.job_id = None
         self.transpiler_config = None
+        self.circuit = None
 
-        if isinstance(circuit, QuantumCircuit):
-            self.circuit = circuit
-        elif circuit is not None:
-            raise TypeError(f'Circuit must be a QuantumCircuit, or Premade.  Was given type: {type(circuit)}')
+        # if isinstance(circuit, QuantumCircuit):
+        #     self.circuit = circuit
+        # elif circuit is not None:
+        #     raise TypeError(f'Circuit must be a QuantumCircuit, or Premade.  Was given type: {type(circuit)}')
 
     @property
     def id(self):
@@ -307,9 +323,9 @@ class TestCircuit:
             return backend.retrieve_job(self.stats.job_id)
 
     @staticmethod
-    def generate(case: str, size: int) -> TestCircuit:
+    def generate(case: str, size: int, measure: bool = True, seed: int = None) -> TestCircuit:
         tc = TestCircuit()
-        tc.add_circ(case, size)
+        tc.add_circ(case, size, measure=measure, seed=seed)
 
         return tc
 
@@ -374,32 +390,50 @@ class TestCircuit:
         sim = Aer.get_backend('qasm_simulator')
         self.stats.ideal_distribution = execute(self.compiled_circ, sim).result().get_counts()
 
-    def add_circ(self, case: Union[str, Premades], size: int, truth_value: int = None, measure=True) -> None:
+    def add_circ(self, case: Union[str, Premades], size: int, truth_value: int = None, measure=True, seed: int = None) \
+            -> None:
         """ Given an empty TestCircuit, add a circuit to it.
 
         Args:
-            case (str): Dictionary key corresponding to circuit-generating function
-            size (int): width of circuit, in qubits.
-            truth_value (Union[None, int, None, None, None]): Integer corresponding to basis vector that should be
-                        returned by the circuit when executed on an ideal simulator.
-            measure (bool): add measurement operators to created circuit.
+            case (str): Dictionary key corresponding to circuit-generating function OR an existing circuit of type
+                Premades
+            size (int): width of circuit, in qubits.  If case is a str, a circuit of size will be created.  If case
+                is a PreMades, then size should match the existing Premades circ_size attribute.
+            truth_value (Union[int, None]): Integer corresponding to basis vector that should be
+                returned by the circuit when executed on an ideal simulator.  If case is a str, then truth_value will
+                  be encoded in any oracles created by Premades circuit functions. If case is a PreMades, then
+                  truth_value should match the existing Premades truth_value attribute.
+            measure (bool): Optional. Add measurement operators to created circuit.  Unused if case if of type
+                Premades
+            seed (int): Optional. Sets Random state for reproducibility.  Unused if case is of type Premades.
 
         Returns:
             None:
         """
 
+        # TODO Refactor this to more elegantly accept either type for case.  e.g. by splitting into two methods
+        #  (don't like that option), or maybe by changing to a **kwargs format, though that will obscure inner workings.
+
         if isinstance(case, str):
-            self.circuit = Premades(size, truth_value, measure)
+            self.circuit = Premades(size, truth_value, measure=measure, seed=seed)
             self.circuit.circ_lib[case](self.circuit)
+
             self.stats.name = case
-        elif isinstance(case, QuantumCircuit):
+            self.stats.truth_value = truth_value
+            self.stats.circ_width = size
+            self.stats.seed = seed
+
+        elif isinstance(case, Premades):
+            # If we're being given an existing circ, we use it for our single source of truth and just ignore
+            # The passed parameters
             self.circuit = case
             self.stats.name = self.circuit.name
+            self.stats.truth_value = self.circuit.truth_value
+            self.stats.circ_width = self.circuit.circ_size
+            self.stats.seed = self.circuit.seed
         else:
-            raise ValueError(f'Case must be either a key reference to existing circuit generators or a QuantumCircuit')
+            raise ValueError(f'Case must be either a key reference to existing circuit generators or a Premades')
 
-        self.stats.truth_value = truth_value
-        self.stats.circ_width = size
         self.stats.pre_depth = self.circuit.depth()
 
     def transpile_test(self, pass_manager=None, default_be=preferred_backend, ATTEMPTS: int = 1) -> QuantumCircuit:
@@ -407,8 +441,9 @@ class TestCircuit:
 
         Args:
             pass_manager (PassManager): Custom PassManager to use to transpile this circuit.
-            default_be (str): Default backend to use for transpilation; defaults to preferred_backend
-            ATTEMPTS (int): Number of transpile tests to be run to generate averages.
+            default_be (str): Optional. Default backend to use for transpilation; defaults to preferred_backend defined
+                in run_experiment.py
+            ATTEMPTS (int): Optional. Number of transpile tests to be run to generate averages.
 
         Returns:
             qiskit.circuit.quantumcircuit.QuantumCircuit: Returns the compiled circuit for chaining; also saves it to

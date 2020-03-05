@@ -12,6 +12,7 @@ class Statblock:
 
         self.circ_width = None
         self.pre_depth = None
+        self.seed = None
 
         self.backend = None
         self.post_depth = None
