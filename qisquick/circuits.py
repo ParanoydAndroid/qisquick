@@ -58,6 +58,7 @@ class Premades(QuantumCircuit):
 
     def two_bell(self) -> None:
         size = self.circ_size
+        random.seed(self.seed)
 
         if size % 2 != 0:
             # TODO just change this to allow odd qubits
@@ -74,6 +75,7 @@ class Premades(QuantumCircuit):
 
     def m_to_m(self) -> None:
         size = self.circ_size
+        random.seed(self.seed)
         candidates = tuple(range(size))
 
         self._get_random_input_state(self.seed)
@@ -98,6 +100,7 @@ class Premades(QuantumCircuit):
         """ Create and return a quantum circuit implementation of Grover's search algorithm. """
 
         size = self.circ_size
+        random.seed(self.seed)
 
         # Split the single qreg into the computational register and a "work" register to store the oracle results
         qr = self.qr[:-1]
@@ -185,6 +188,7 @@ class Premades(QuantumCircuit):
         and whose CX endpoints are chosen uniformly from available qubits"""
 
         size = self.circ_size
+        random.seed(self.seed)
 
         gates = [self.h, self.x, self.y, self.z, self.s, self.t, self.cx]
         candidates = set(range(size))
@@ -206,6 +210,7 @@ class Premades(QuantumCircuit):
             None:
         """
         size = self.circ_size
+        random.seed(self.seed)
         meas = self.meas
         tv = self.truth_value
 
@@ -248,6 +253,7 @@ class Premades(QuantumCircuit):
 
     def qft(self) -> None:
         """ implementation stolen shamelessly from github.com/Qiskit/qiskit-terra/blob/master/examples/python/qft.py"""
+        random.seed(self.seed)
         self.__qft_input_state(self.circ_size)
 
         for i in range(self.circ_size):
