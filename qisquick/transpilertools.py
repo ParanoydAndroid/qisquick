@@ -1,5 +1,3 @@
-from qiskit.compiler.transpile import *
-
 from typing import List, Union
 
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
