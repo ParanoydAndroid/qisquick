@@ -115,6 +115,10 @@ def run_local_experiment() -> List[str]:
     """By Brandon Kamaka, 30 Jan 2020.  Reproducibility experiment to validate test bed
         Create a series of test circuits, and transpile each series with distinct options from various layout and SWAP
         optimizing papers.  Compare success, SWAP efficiency, and time efficiency metrics
+
+    Args:
+    Returns:
+        List[str]: List of ids of circuits created and tested by this experiment.
     """
 
     from qiskit.transpiler import CouplingMap
@@ -221,6 +225,7 @@ def run_local_experiment() -> List[str]:
 def get_batches(tcs: List[Any], batch_size: int = 25) -> List[List[Any]]:
     """ IBM QX devices expect relatively small lists of circuits to run.  This function takes a list of circuits
         of arbitrary size and returns a list of list of circuits, where each inner list contains batch_size circuits.
+
     Args:
         tcs (List): List to be batched
         batch_size (int):
@@ -305,7 +310,8 @@ def create_all(size: int = 4, truth_value: int = 5, filename: str = None) -> Lis
         filename (str): If given, will cause each generated circuit to create a .png of its composer format.
 
     Returns:
-        List[qls.circuits.TestCircuit]:
+        List[qls.circuits.TestCircuit]:  A list containing one TestCircuit object for each Premades test circuit defined
+            in Premades.circ_lib
     """
     circs = []
     for key in Premades.circ_lib.keys():
@@ -326,7 +332,7 @@ def get_cli_args():
     """ Uses argparse to parse arguments when this module is called directly.  If being imported, these same
         flags can be passed as named parameters to the run_experinment() function call.  Keys are described below:
 
-        Named Parameters Consumed by this module:
+    Keys:
         check_only (bool): If True the checking routine for recovering executed jobs from the IBM backend is run, but
             the experiment itself is not.  Otherwise both are run
         run_only (bool): Opposite of check_only.  If True the experiment is run but results are not checked for.

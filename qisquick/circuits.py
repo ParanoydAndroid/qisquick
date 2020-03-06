@@ -25,13 +25,15 @@ preferred_backend: str = PREFERRED_BACKEND
 
 
 class Premades(QuantumCircuit):
+    """ QuantumCircuit subclass to store new attributes used to automate circuit generation.  Used with TestCircuit"""
+
     def __init__(self, size: int, truth_value: int, measure: bool = True, seed: int = None):
         """ Creates a Premades object that wraps QuantumCircuits to carry additional information.  Most important is
-            that the PreMades object stores the uniform interface parameters for generating new circuits.
+            that the Premades object stores the uniform interface parameters for generating new circuits.
 
         Args:
             size (int): Width of the desired circuit.  i.e. the register size of the quantum register defining it.
-            truth_value (int): An inteeger to encode in any oracles that the circuit uses.  Usually used to define
+            truth_value (int): An integer to encode in any oracles that the circuit uses.  Usually used to define
                 the "right" value for the circuit to return.  E.g. the correct value for a grover's search to find.
             measure (bool): Optional. If True, adds measurement operators to the end of the circuit.
             seed (int): Optional.  If not None, the provided seed is used to set random state for reproducibility.
@@ -137,6 +139,9 @@ class Premades(QuantumCircuit):
         if self.meas: self.measure(self.qr, self.cr)
 
     def islands(self) -> None:
+        """ Represents hub-and-spoke constraint topologies.  Selects hubs at random and assigns a random number
+            of spokes to them.  Selects new hubs after all qubits have been consumed, up to (size) layers"""
+
         size = self.circ_size
 
         self._get_random_input_state(self.seed)
@@ -297,7 +302,20 @@ class Premades(QuantumCircuit):
 
 
 class TestCircuit:
+    """ Primary object of qisquick.  Associates a Premades object along with its statistics and execution environment"""
+
     def __init__(self):
+        """ Constructor.
+
+        Args:
+            stats (Statblock): Stores all relevant statistics.  Written at TestCircuit creation/association with a
+                Premades, at job submission, and post-execution.
+            compiled_circ (Premades): A transpiled version of self.circuit, using the transpilerConfig from stats
+            backend (str): Identifier of IBM QX backend to use for transpilation and execution.
+            job_id (str): Unique identifier returned by execute().
+            transpiler_config (TranspilerConfig): Backend state used by PassManager to transpile circuit.
+            circuit (Premades): Experimental object inherited from QuantumCircuit.  Usually made from existing test set.
+        """
         self.stats = Statblock(parent=self)
         self.compiled_circ = None
         self.backend = None
@@ -393,6 +411,7 @@ class TestCircuit:
         dbc.write_objects(dbc.db_location, tests)
 
     def get_ideal_result(self):
+        """ Returns the distribution associated with executing a TestCircuit.compiled_circuit on the QASM sim."""
         sim = Aer.get_backend('qasm_simulator')
         self.stats.ideal_distribution = execute(self.compiled_circ, sim).result().get_counts()
 
