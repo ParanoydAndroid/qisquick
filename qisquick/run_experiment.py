@@ -13,10 +13,26 @@ from qisquick import transpilertools
 from qisquick.circuits import TestCircuit, Premades
 from qisquick.qis_logger import config_logger, get_module_logger
 
-PREFERRED_PROVIDER = None
-PREFERRED_BACKEND = None
+PREFERRED_PROVIDER = 'ibm-q'
+PREFERRED_BACKEND = 'ibmq_16_melbourne'
+
+# Can't define the logger up front because we have to define the verbosity level first.
 logger = None
-backend = None
+_backend = None
+
+""" Driver module for qisquick.  Handles basic startup, configuration, and running experiments.
+
+    Args (globals):
+        PREFERRED_PROVIDER (str): id specifying the provider used by qisquick, if none other is provided.  Defaults
+            to 'ibm-q'.  Eligible IDs are found by calling IBMQ.get_providers() and can be passed via the backend param 
+            of run_experiment.
+        PREFERRED_BACKEND (str): id specifying the default backend used by qisquick, if none other is provided.
+            Defaults to 'ibmq_16_melbourne'.  Eligible backends can be found by calling [provider].backends() and can
+            be passed via the backend param of run_experiment.
+        logger (Logger): Module-level logger used to determine log message format and define its source.
+        _backend (IBMQ.Basebackend): backend object provided for quick access.  Determined by calling 
+            [provider].get_backend(PREFERRED_BACKEND).
+"""
 
 
 def main(argv):
@@ -35,52 +51,6 @@ def main(argv):
     _execute(run_local_experiment, check=check_only, run_only=run_only, verbosity=verbosity)
 
 
-def _execute(experiment: Callable, **kwargs):
-    """Called either by run_experiment if this library is imported, or by main() if being run as main.
-        handles the primary function loop of this application: create/use db, run experiment, check for results
-        and register final statistics
-
-    Args:
-        experiment (Callable): Experiment to execute.  The provided experiment should accept no arguments and should
-            return a list of database IDs to check for circuit execution completion.
-        kwargs: Dictionary of arguments corresponding to those defined by the get_cli_args function in this module.
-
-    Returns:
-        None
-        """
-
-    run_once = True
-
-    check_only = kwargs['check_only']
-    run_only = kwargs['run_only']
-
-    # Prevent duplicates
-    ids = set()
-
-    while True:
-        if run_once and not check_only:
-            new_ids = experiment()
-            ids.update(set(new_ids))
-            run_once = False
-
-        if run_only:
-            break
-
-        else:
-            logger.info(f'\t\tCHECKING FOR COMPLETED CIRCUITS...')
-            new_ids = check_running()
-            ids.update(set(new_ids))
-            if dbc.is_empty(dbc.db_location, 'Running'):
-                dbc.write_stats(dbc.db_location, ids)
-                logger.info(f'All Running jobs have completed.  Shutting down ...')
-                break
-
-            # seconds
-            sleep(60)
-
-    sys.exit(0)
-
-
 def run_experiment(experiment: Callable, db_location: str = None, provider: str = None, backend: str = None, **kwargs) \
         -> None:
     """ Function provided for run_experiment.py imports into other systems.  This can be called with a user
@@ -90,8 +60,8 @@ def run_experiment(experiment: Callable, db_location: str = None, provider: str 
         experiment (Callable): The function defined by the user to run their experiment
         db_location (str): Optional.  Should be of the form 'relative/path/dbName.sqlite'
             Defaults to data/circuit_data.sqlite
-        provider (str): Optional. String reference used to retrieve provider object.  Defaults to AFRL Hub (private)
-        backend (str): Optional. String reference used to retrieve backend. Defaults to IBMQ_poughkeepsie (private)
+        provider (str): Optional. String reference used to retrieve provider object.  Defaults to ibm-q
+        backend (str): Optional. String reference used to retrieve backend. Defaults to ibmq_16_melbourne
         kwargs: Dictionary of arguments corresponding to those defined by the get_cli_args function in this module.
 
 
@@ -179,13 +149,13 @@ def run_local_experiment() -> List[str]:
 
             # Start by getting a transpiler config from the circuits and backend
             level = 1 if pass_configurations[test_config[0]] != 'IBM Optimized' else 3
-            configs = transpilertools.get_transpiler_config(circs=tests, be=backend, optimization_level=level)
+            configs = transpilertools.get_transpiler_config(circs=tests, be=_backend, optimization_level=level)
 
             # Then we use the configs to get the appropriate PassManager for each configuration
             pms = []
             for idx, config in enumerate(configs):
                 pm = transpilertools.get_basic_pm(config, level=level)
-                cm = CouplingMap(backend.configuration().coupling_map)
+                cm = CouplingMap(_backend.configuration().coupling_map)
 
                 if test_config[1] == 1:
                     pass_type = 'swap'
@@ -193,7 +163,7 @@ def run_local_experiment() -> List[str]:
 
                 elif test_config[1] == 2:
                     pass_type = 'layout'
-                    new_pass = DenseLayout(coupling_map=cm, backend_prop=backend.properties())
+                    new_pass = DenseLayout(coupling_map=cm, backend_prop=_backend.properties())
 
                 else:
                     modified_pm = pm
@@ -220,6 +190,52 @@ def run_local_experiment() -> List[str]:
             tests_all_ids.extend([test.id for test in tests])
 
     return tests_all_ids
+
+
+def _execute(experiment: Callable, **kwargs):
+    """Called either by run_experiment if this library is imported, or by main() if being run as main.
+        handles the primary function loop of this application: create/use db, run experiment, check for results
+        and register final statistics
+
+    Args:
+        experiment (Callable): Experiment to execute.  The provided experiment should accept no arguments and should
+            return a list of database IDs to check for circuit execution completion.
+        kwargs: Dictionary of arguments corresponding to those defined by the get_cli_args function in this module.
+
+    Returns:
+        None
+        """
+
+    run_once = True
+
+    check_only = kwargs['check_only']
+    run_only = kwargs['run_only']
+
+    # Prevent duplicates
+    ids = set()
+
+    while True:
+        if run_once and not check_only:
+            new_ids = experiment()
+            ids.update(set(new_ids))
+            run_once = False
+
+        if run_only:
+            break
+
+        else:
+            logger.info(f'\t\tCHECKING FOR COMPLETED CIRCUITS...')
+            new_ids = check_running()
+            ids.update(set(new_ids))
+            if dbc.is_empty(dbc.db_location, 'Running'):
+                dbc.write_stats(dbc.db_location, ids)
+                logger.info(f'All Running jobs have completed.  Shutting down ...')
+                break
+
+            # seconds
+            sleep(60)
+
+    sys.exit(0)
 
 
 def get_batches(tcs: List[Any], batch_size: int = 25) -> List[List[Any]]:
@@ -354,13 +370,13 @@ def get_cli_args():
 
 
 def _pre_process(default_provider: str = None, default_backend: str = None) -> argparse.Namespace:
-    global PREFERRED_PROVIDER, PREFERRED_BACKEND, backend
+    global PREFERRED_PROVIDER, PREFERRED_BACKEND, _backend
 
-    PREFERRED_BACKEND = default_backend if default_backend is not None else 'ibmq_poughkeepsie'
-    PREFERRED_PROVIDER = default_provider if default_provider is not None else 'ibm-q-afrl'
+    PREFERRED_BACKEND = default_backend if default_backend is not None else PREFERRED_BACKEND
+    PREFERRED_PROVIDER = default_provider if default_provider is not None else PREFERRED_PROVIDER
     IBMQ.load_account()
     provider = IBMQ.get_provider(PREFERRED_PROVIDER)
-    backend = provider.get_backend(PREFERRED_BACKEND)
+    _backend = provider.get_backend(PREFERRED_BACKEND)
 
     return get_cli_args()
 

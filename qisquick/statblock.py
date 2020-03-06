@@ -2,6 +2,9 @@ import uuid
 
 
 class Statblock:
+    """ Associated with each TestCircuit on creation.  Stores object properties relevant for analyzing experimental
+        results or reproducing them."""
+
     def __init__(self, parent):
         self.id = uuid.uuid4().hex
         self.parent = parent

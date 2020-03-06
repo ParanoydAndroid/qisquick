@@ -4,6 +4,8 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 import numpy as np
 
+""" Eclectic collection of unbound helper functions"""
+
 
 def refresh(size: int, qreg_name: str = 'qr', creg_name: str = 'cr', circ_name: str = 'qc') \
         -> Tuple[QuantumCircuit, QuantumRegister, ClassicalRegister]:

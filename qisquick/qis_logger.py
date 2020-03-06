@@ -7,8 +7,11 @@ filename = 'qls.log'
 
 
 def config_logger(verbosity):
+    """ Provides initial setup of logging system by setting format, separating out Qiskit and other 3rd party logging
+        systems, and defining the log location."""
+
     global level, fmt
-    level = get_logging_level(verbosity)
+    level = _get_logging_level(verbosity)
 
     # Setup basic, universal logging details
     logging.basicConfig(format=fmt,
@@ -32,7 +35,8 @@ def config_logger(verbosity):
 
 
 def get_module_logger(name, file=filename, lvl=level):
-    # Return module logger
+    """" Should be called by each module to ensure the logger can correctly trace message sources"""
+
     logger = logging.getLogger(name)
     logger.setLevel(lvl)
     main_fh = logging.FileHandler(filename=file)
@@ -42,7 +46,7 @@ def get_module_logger(name, file=filename, lvl=level):
     return logger
 
 
-def get_logging_level(verbosity):
+def _get_logging_level(verbosity):
     logging_levels = {0: logging.CRITICAL,
                       1: logging.ERROR,
                       2: logging.WARNING,

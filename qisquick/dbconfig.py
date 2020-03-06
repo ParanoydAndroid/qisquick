@@ -8,6 +8,14 @@ from qisquick.circuits import TestCircuit
 from qisquick.statblock import Statblock
 from qisquick.qis_logger import get_module_logger
 
+""" Database configuration, reading, and writing module for Qisquick.  
+
+    Args (global):
+        logger: logging module associated with dbconfig.  Retrieved from qis_logger.py
+        db_location: Maintains db location.  Can be changed by a direct call to set_db_location() or by passing
+            db_location param when calling run_experiment().
+"""
+
 logger = get_module_logger(__name__)
 
 db_location = 'data/circuit_data.sqlite'
