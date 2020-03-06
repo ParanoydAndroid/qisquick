@@ -9,6 +9,7 @@ from qiskit.transpiler.preset_passmanagers import *
 from qiskit.transpiler.transpile_config import TranspileConfig
 
 from qisquick.circuits import TestCircuit
+
 """
 Module of unbound helper functions to integrate into the Qiskit transpiler workflow.
 
@@ -22,15 +23,15 @@ def get_transpiler_config(circs: Union[List[TestCircuit], TestCircuit, List[Quan
         length such that configs[i] is the config for circs[i]
 
     Args:
-        circs (Union[List[qls.circuits.TestCircuit], qls.circuits.TestCircuit]): List of circuits to
+        circs (Union[List[TestCircuit], TestCircuit]): Single circuit or List of circuits to
             compile configurations for
-        be (qiskit.providers.ibmq.ibmqbackend.IBMQBackend): Backend object to execute the circuits on.
+        be (IBMQBackend): Backend object to execute the circuits on.
         layout (Layout): Optional.  Initial layout to use.
         optimization_level (int): Optional. IBM transpiler optimization level to target [0, 3].
         callback (Callable): Optional. Function to call at the end of execution of each pass in the PassManager.
 
     Returns:
-        List[qiskit.transpiler.transpile_config.TranspileConfig]: List of transpiler configurations associated with
+        List[TranspileConfig]: List of transpiler configurations associated with
             circs.
     """
     # First, parse the input type of circs and process it correctly to return a list of only QuantumCircuits
@@ -73,12 +74,12 @@ def get_basic_pm(transpiler_config: TranspileConfig, level: int = 0) -> PassMana
     """ Get a pre-populated PassManager from the native Qiskit implementation.
 
     Args:
-        transpiler_config (qiskit.transpiler.transpile_config.TranspileConfig): Configuration used to generate the
+        transpiler_config (TranspileConfig): Configuration used to generate the
             tailored PassManager.
         level (int): Optional. Qiskit Transpiler optimization level to target.
 
     Returns:
-        qiskit.transpiler.passmanager.PassManager: PassManager instance associated with the provided config.
+        PassManager: PassManager instance associated with the provided config.
     """
     pm_funcs = {
         0: level_0_pass_manager,
@@ -143,6 +144,7 @@ def get_modified_pm(pass_manager: PassManager, version: int, pass_type: str, new
 
 
 def get_passes_str(pm: PassManager) -> str:
+    """ Returns str of actual passes embedded in the provided PassManager object."""
     pass_list = pm.passes()
 
     msg = ''

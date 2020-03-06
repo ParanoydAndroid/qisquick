@@ -8,7 +8,12 @@ filename = 'qls.log'
 
 def config_logger(verbosity):
     """ Provides initial setup of logging system by setting format, separating out Qiskit and other 3rd party logging
-        systems, and defining the log location."""
+        systems, and defining the log location.
+
+    Args:
+          verbosity (int): Derived from the count of v's if passed as CLI param, or passed directly via verbosity param
+            in run_experiment call.  Should be in range(4).
+    """
 
     global level, fmt
     level = _get_logging_level(verbosity)
