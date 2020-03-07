@@ -16,12 +16,13 @@ from qiskit.providers import basebackend
 from qiskit.providers.jobstatus import JobStatus
 from qiskit.transpiler import PassManager
 
-from qisquick.run_experiment import PREFERRED_BACKEND
 from qisquick.statblock import Statblock
 from qisquick.qis_logger import get_module_logger
 
 logger = get_module_logger(__name__)
-preferred_backend: str = PREFERRED_BACKEND
+
+# Written by run_experiment
+_preferred_backend: str = None
 
 
 class Premades(QuantumCircuit):
@@ -107,6 +108,11 @@ class Premades(QuantumCircuit):
         # Split the single qreg into the computational register and a "work" register to store the oracle results
         qr = self.qr[:-1]
         wr = self.qr[-1:]
+
+        if self.truth_value is None:
+            raise ValueError(f'This circuit type requires a truth value be set before it can be generated.  i.e. with'
+                             f'"my_Premade.truth_value = (some_int)"')
+
         tv = self.truth_value
 
         self.h(qr)
@@ -217,6 +223,11 @@ class Premades(QuantumCircuit):
         size = self.circ_size
         random.seed(self.seed)
         meas = self.meas
+
+        if self.truth_value is None:
+            raise ValueError(f'This circuit type requires a truth value be set before it can be generated.  i.e. with'
+                             f'"my_Premade.truth_value = (some_int)"')
+
         tv = self.truth_value
 
         if math.ceil(math.log2(tv)) + 1 > size:
@@ -302,10 +313,8 @@ class Premades(QuantumCircuit):
 
 
 class TestCircuit:
-    """ Primary object of qisquick.  Associates a Premades object along with its statistics and execution environment"""
-
     def __init__(self):
-        """ Constructor.
+        """Primary object of qisquick.  Associates a Premades object along with its statistics and execution environment
 
         Args:
             stats (Statblock): Stores all relevant statistics.  Written at TestCircuit creation/association with a
@@ -347,16 +356,18 @@ class TestCircuit:
             return backend.retrieve_job(self.stats.job_id)
 
     @staticmethod
-    def generate(case: str, size: int, measure: bool = True, seed: int = None) -> TestCircuit:
+    def generate(case: str, size: int, truth_value: int = None, measure: bool = True, seed: int = None) -> TestCircuit:
+        """ Static shortcut method to generate a TestCircuit and attach a Premades object to it.  Same as calling
+            add_circ() on an existing TestCircuit. """
         tc = TestCircuit()
-        tc.add_circ(case, size, measure=measure, seed=seed)
+        tc.add_circ(case, size, truth_value=truth_value, measure=measure, seed=seed)
 
         return tc
 
     @staticmethod
     def run_all_tests(tests: Union[List[TestCircuit], List[QuantumCircuit], TestCircuit, QuantumCircuit],
                       pass_manager: Union[PassManager, List[PassManager]] = None, generate_compiled: bool = True,
-                      be: str = preferred_backend, attempts: int = 1) -> None:
+                      be: str = _preferred_backend, attempts: int = 1) -> None:
         """ Given a circuit or list of circuits to execute, it executes all of them and writes all results to the
             appropriate db.  Depending on parameters, a custom PassManager can be used, and the circuits will also be
             compiled before execution.
@@ -365,7 +376,7 @@ class TestCircuit:
             tests (List[TestCircuit]): Circuits to be tested
             pass_manager (PassManager): Custom PassManager to use for transpilation, if desired.  Default: IBM default
             generate_compiled (bool): If True, will transpile circuits prior to execution
-            be (Backend): IBM backend to use for transpilation and execution.  Default: preferred_backend
+            be (Backend): IBM backend to use for transpilation and execution.  Default: _preferred_backend
             attempts: Number of times to transpile the circuits to generate average compile time
 
         Returns: None (but writes results to statistics database as a side effect)
@@ -461,12 +472,12 @@ class TestCircuit:
 
         self.stats.pre_depth = self.circuit.depth()
 
-    def transpile_test(self, pass_manager=None, default_be=preferred_backend, ATTEMPTS: int = 1) -> QuantumCircuit:
+    def transpile_test(self, pass_manager=None, default_be=_preferred_backend, ATTEMPTS: int = 1) -> QuantumCircuit:
         """ Transpile TestCircuit with provided pass_manager and register statistics, but do not execute.
 
         Args:
             pass_manager (PassManager): Custom PassManager to use to transpile this circuit.
-            default_be (str): Optional. Default backend to use for transpilation; defaults to preferred_backend defined
+            default_be (str): Optional. Default backend to use for transpilation; defaults to _preferred_backend defined
                 in run_experiment.py
             ATTEMPTS (int): Optional. Number of transpile tests to be run to generate averages.
 
@@ -476,7 +487,7 @@ class TestCircuit:
         """
 
         if self.backend is None:
-            logger.warning(f'Transpiler: Circuit ({self.id}) had no backend.  Resorted to default: {preferred_backend}')
+            logger.warning(f'Transpiler: Circuit ({self.id}) had no backend.  Resorted to default: {_preferred_backend}')
             self.backend = default_be
 
         transpile_times = []
@@ -531,7 +542,7 @@ class TestCircuit:
         dbc.write_objects(dbc.db_location, [self])
         dbc.insert_in_progress(dbc.db_location, [self])
 
-    def get_circ_backend(self, hub: str = 'ibm-q-afrl', default_backend=preferred_backend) -> basebackend:
+    def get_circ_backend(self, hub: str = 'ibm-q-afrl', default_backend=_preferred_backend) -> basebackend:
         """ Helper function to map a backend's string ID to its object.
 
         Args:

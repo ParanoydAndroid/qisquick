@@ -4,7 +4,6 @@ import traceback
 
 from typing import Dict, Iterable, List, Tuple
 
-from qisquick.circuits import TestCircuit
 from qisquick.statblock import Statblock
 from qisquick.qis_logger import get_module_logger
 
@@ -27,7 +26,7 @@ def set_db_location(location: str) -> None:
         db_location = location
 
 
-def insert_in_progress(db: str, jobs: List[TestCircuit]) -> None:
+def insert_in_progress(db: str, jobs: List) -> None:
     running_records = []
     for tc in jobs:
         uuid = tc.id
@@ -48,7 +47,7 @@ def insert_in_progress(db: str, jobs: List[TestCircuit]) -> None:
         if conn: conn.close()
 
 
-def load_in_progress(db: str) -> Dict[str, TestCircuit]:
+def load_in_progress(db: str) -> Dict[str, object]:
     check = '''SELECT uuid, jobID, object
                 FROM Running
             '''
@@ -86,7 +85,7 @@ def drop_in_progress(db: str, done: List[str]) -> None:
         if conn: conn.close()
 
 
-def write_objects(db: str, tcs: List[TestCircuit]) -> None:
+def write_objects(db: str, tcs: List) -> None:
     insertions, updates = partition_writes(db, tcs)
 
     if updates:
@@ -106,7 +105,7 @@ def write_objects(db: str, tcs: List[TestCircuit]) -> None:
         logger.info(msg)
 
 
-def insert_objects(db: str, tcs: List[TestCircuit]) -> None:
+def insert_objects(db: str, tcs: List) -> None:
     records = []
     for tc in tcs:
         uuid = tc.stats.id
@@ -129,7 +128,7 @@ def insert_objects(db: str, tcs: List[TestCircuit]) -> None:
         if conn: conn.close()
 
 
-def partition_writes(db: str, tcs: List[TestCircuit]) -> Tuple[List, List]:
+def partition_writes(db: str, tcs: List) -> Tuple[List, List]:
     check = '''SELECT uuid
                 FROM CIRCS
                 WHERE uuid=?'''
@@ -152,7 +151,7 @@ def partition_writes(db: str, tcs: List[TestCircuit]) -> Tuple[List, List]:
     return insertions, updates
 
 
-def update_objects(db: str, tcs: List[TestCircuit]) -> None:
+def update_objects(db: str, tcs: List) -> None:
     records = []
     for tc in tcs:
         job_id = tc.stats.job_id
@@ -178,7 +177,7 @@ def update_objects(db: str, tcs: List[TestCircuit]) -> None:
         if conn: conn.close()
 
 
-def retrieve_objects(db: str, ids: List[str]) -> List[TestCircuit]:
+def retrieve_objects(db: str, ids: List[str]) -> List:
     conformed_list = [(uuid,) for uuid in ids]
     circs = []
     try:

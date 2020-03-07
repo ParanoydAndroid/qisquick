@@ -2,6 +2,8 @@ import argparse
 import sys
 import traceback
 
+import qisquick.circuits as qqc
+
 from time import sleep
 from typing import List, Union, Any, Callable
 
@@ -9,8 +11,7 @@ from matplotlib.pyplot import close
 from qiskit import IBMQ
 
 from qisquick import dbconfig as dbc
-from qisquick import transpilertools
-from qisquick.circuits import TestCircuit, Premades
+from qisquick.circuits import Premades, TestCircuit
 from qisquick.qis_logger import config_logger, get_module_logger
 
 PREFERRED_PROVIDER = 'ibm-q'
@@ -30,7 +31,7 @@ _backend = None
             Defaults to 'ibmq_16_melbourne'.  Eligible backends can be found by calling [provider].backends() and can
             be passed via the backend param of run_experiment.
         logger (Logger): Module-level logger used to determine log message format and define its source.
-        _backend (IBMQ.Basebackend): backend object provided for quick access.  Determined by calling 
+        _backend (Basebackend): backend object provided for quick access.  Determined by calling 
             [provider].get_backend(PREFERRED_BACKEND).
 """
 
@@ -93,6 +94,8 @@ def run_local_experiment() -> List[str]:
 
     from qiskit.transpiler import CouplingMap
     from qiskit.transpiler.passes import LookaheadSwap, DenseLayout
+
+    from qisquick import transpilertools
 
     dbc.set_db_location('data/circuit_data.sqlite')
     pass_configurations = {
@@ -316,13 +319,14 @@ def check_running() -> List[str]:
     return list(completed.keys())
 
 
-def create_all(size: int = 4, truth_value: int = 5, filename: str = None) -> List[TestCircuit]:
+def create_all(size: int = 4, truth_value: int = 5, seed: int = None, filename: str = None) -> List[TestCircuit]:
     """ Quick functionality test.  Creates and returns one copy of each test set object, and generates diagrams of them.
 
     Args:
         size (int): Width of circuit to generate.  Sizes > ~14 qubits are likely to take a long time.
         truth_value (int): Desired base state for the circuit to return under measurement, if executed on an ideal sim.
             This is not applicable for all test circuits (e.g. QFT)
+        seed (int): Set random state for reproducibility.
         filename (str): If given, will cause each generated circuit to create a .png of its composer format.
 
     Returns:
@@ -333,7 +337,7 @@ def create_all(size: int = 4, truth_value: int = 5, filename: str = None) -> Lis
     for key in Premades.circ_lib.keys():
         new_test = TestCircuit()
         logger.info(f'Creating test circuit for {key} function')
-        new_test.add_circ(key, size=size, truth_value=truth_value, measure=True)
+        new_test.add_circ(key, size=size, truth_value=truth_value, measure=True, seed=seed)
         circs.append(new_test)
         print(f'Test circuit ({key}) stats (pre-transpile):\n{str(new_test.stats)}')
         if filename:
@@ -374,6 +378,9 @@ def _pre_process(default_provider: str = None, default_backend: str = None) -> a
 
     PREFERRED_BACKEND = default_backend if default_backend is not None else PREFERRED_BACKEND
     PREFERRED_PROVIDER = default_provider if default_provider is not None else PREFERRED_PROVIDER
+
+    # Write global over to TestCircuit
+    qqc._preferred_backend = PREFERRED_BACKEND
     IBMQ.load_account()
     provider = IBMQ.get_provider(PREFERRED_PROVIDER)
     _backend = provider.get_backend(PREFERRED_BACKEND)

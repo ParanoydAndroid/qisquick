@@ -9,6 +9,7 @@ from qiskit.transpiler.preset_passmanagers import *
 from qiskit.transpiler.transpile_config import TranspileConfig
 
 from qisquick.circuits import TestCircuit
+from qisquick.run_experiment import PREFERRED_BACKEND
 
 """
 Module of unbound helper functions to integrate into the Qiskit transpiler workflow.
@@ -17,7 +18,7 @@ Module of unbound helper functions to integrate into the Qiskit transpiler workf
 
 
 def get_transpiler_config(circs: Union[List[TestCircuit], TestCircuit, List[QuantumCircuit], QuantumCircuit],
-                          be: basebackend, layout: Layout = None, optimization_level: int = None,
+                          be: basebackend = PREFERRED_BACKEND, layout: Layout = None, optimization_level: int = None,
                           callback: callable = None) -> List[TranspileConfig]:
     """ Given a list of circuits and a backend to execute them on, return a list of transpiler configs of the same
         length such that configs[i] is the config for circs[i]
@@ -32,7 +33,7 @@ def get_transpiler_config(circs: Union[List[TestCircuit], TestCircuit, List[Quan
 
     Returns:
         List[TranspileConfig]: List of transpiler configurations associated with
-            circs.
+            circs.  Also writes to self.transpiler_config as a side-effect.
     """
     # First, parse the input type of circs and process it correctly to return a list of only QuantumCircuits
     # Also set a flag to save TestCircuit.transpiler_config to member field if TestCircuits were provided.
