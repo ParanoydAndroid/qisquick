@@ -15,7 +15,6 @@ setuptools.setup(
     author='Brandon K Kamaka',
     author_email='brandon.kamaka@gmail.com',
     url='https://github.com/ParanoydAndroid/qisquick',
-    download_url='https://github.com/user/reponame/archive/v_01.tar.gz',  # I explain this later on
     keywords=['transpiler', 'qiskit', 'quantum'],
     install_requires=[
         'qiskit',
