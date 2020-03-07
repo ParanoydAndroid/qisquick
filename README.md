@@ -7,7 +7,7 @@ qisquick provides a test set of defined quantum circuits, functions to help modi
 ## Using qisquick
 
 qisquick can be thought of as composed of two use-cases: experiment scripting and experiment execution.  A quick use guide is provided here,
-but more information can be found in the html/ directory of this package, which includes documentation on individual modules,
+but more information can be found in the documentation.pdf file of this package, which includes documentation on individual modules,
 classes, and functions.
 
 ### Experiment Scripting
