@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='qisquick',
     packages=['qisquick'],
-    version='0.0a5',
+    version='0.0a6',
     license='MIT',
     description='Utility library for automating running and analyzing transpiler experiments with IBM qiskit',
     long_description=long_description,
