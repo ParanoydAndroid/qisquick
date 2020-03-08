@@ -31,5 +31,5 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
         'Environment :: Win32 (MS Windows)'
     ],
-    python_rewuires='>=3.6'
+    python_requires='>=3.6'
 )
