@@ -7,7 +7,7 @@ setuptools.setup(
     name='qisquick',
     packages=['qisquick'],
     include_package_data=True,
-    version='0.0.5',
+    version='0.0a5',
     license='MIT',
     description='Utility library for automating running and analyzing transpiler experiments with IBM qiskit',
     long_description=long_description,

@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 /example.py
 /qisquick.md
+/temp.py
