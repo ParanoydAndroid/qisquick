@@ -6,7 +6,6 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='qisquick',
     packages=['qisquick'],
-    include_package_data=True,
     version='0.0a5',
     license='MIT',
     description='Utility library for automating running and analyzing transpiler experiments with IBM qiskit',
@@ -19,7 +18,6 @@ setuptools.setup(
     install_requires=[
         'qiskit',
         'numpy',
-        'matplotlib',
         'scipy',
     ],
     classifiers=[
@@ -31,5 +29,6 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
         'Environment :: Win32 (MS Windows)'
     ],
-    python_requires='>=3.6'
+    python_requires='>=3.6',
+    data_files=[('docs', ['qisquick_documentation.pdf', 'README.md'])]
 )

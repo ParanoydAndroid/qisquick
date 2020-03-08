@@ -5,9 +5,8 @@ import traceback
 import qisquick.circuits as qqc
 
 from time import sleep
-from typing import List, Union, Any, Callable
+from typing import List, Any, Callable
 
-from matplotlib.pyplot import close
 from qiskit import IBMQ
 
 from qisquick import dbconfig as dbc
@@ -342,8 +341,6 @@ def create_all(size: int = 4, truth_value: int = 5, seed: int = None, filename: 
         print(f'Test circuit ({key}) stats (pre-transpile):\n{str(new_test.stats)}')
         if filename:
             fig = new_test.circuit.draw(output='mpl', filename=f'{filename + "-" + key}.png')
-            fig.suptitle(f'{key}', fontsize=16)
-            close(fig)
 
     return circs
 
