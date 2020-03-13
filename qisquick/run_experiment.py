@@ -370,8 +370,8 @@ def get_cli_args():
     return parser.parse_args()
 
 
-def _pre_process(default_provider: str = None, default_backend: str = None) -> argparse.Namespace:
-    global PREFERRED_PROVIDER, PREFERRED_BACKEND, _backend
+def _pre_process(default_provider: str = None, default_backend: str = None):
+    global PREFERRED_PROVIDER, PREFERRED_BACKEND,_backend
 
     PREFERRED_BACKEND = default_backend if default_backend is not None else PREFERRED_BACKEND
     PREFERRED_PROVIDER = default_provider if default_provider is not None else PREFERRED_PROVIDER
@@ -382,7 +382,7 @@ def _pre_process(default_provider: str = None, default_backend: str = None) -> a
     provider = IBMQ.get_provider(PREFERRED_PROVIDER)
     _backend = provider.get_backend(PREFERRED_BACKEND)
 
-    return get_cli_args()
+    return
 
 
 def _get_logger(verbosity: int) -> None:
@@ -406,6 +406,7 @@ def _get_logger(verbosity: int) -> None:
 
 
 if __name__ == '__main__':
-    args = _pre_process()
+    _pre_process()
+    args = get_cli_args()
     _get_logger(args.verbose)
     main(args)
