@@ -240,8 +240,6 @@ def _execute(experiment: Callable, **kwargs):
             # seconds
             sleep(60)
 
-    sys.exit(0)
-
 
 def get_batches(tcs: List[Any], batch_size: int = 25) -> List[List[Any]]:
     """ IBM QX devices expect relatively small lists of circuits to run.  This function takes a list of circuits
