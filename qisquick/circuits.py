@@ -367,7 +367,7 @@ class TestCircuit:
     @staticmethod
     def run_all_tests(tests: Union[List[TestCircuit], List[QuantumCircuit], TestCircuit, QuantumCircuit],
                       pass_manager: Union[PassManager, List[PassManager]] = None, generate_compiled: bool = True,
-                      be: str = _preferred_backend, attempts: int = 1) -> None:
+                      be: str = None, attempts: int = 1) -> None:
         """ Given a circuit or list of circuits to execute, it executes all of them and writes all results to the
             appropriate db.  Depending on parameters, a custom PassManager can be used, and the circuits will also be
             compiled before execution.
@@ -384,8 +384,12 @@ class TestCircuit:
         """
 
         if not isinstance(tests, List): tests = [tests]
+
         if len(tests) > 25:
             logger.warning(f'Batch size might exceed maximum.  Currently {len(tests)}')
+
+        if not be:
+            be = _preferred_backend
 
         # If the circuits have been separately transpiled, we need to ensure they were done so uniformly
         compiled_circs = []
@@ -472,7 +476,7 @@ class TestCircuit:
 
         self.stats.pre_depth = self.circuit.depth()
 
-    def transpile_test(self, pass_manager=None, default_be=_preferred_backend, ATTEMPTS: int = 1) -> QuantumCircuit:
+    def transpile_test(self, pass_manager=None, default_be=None, ATTEMPTS: int = 1) -> QuantumCircuit:
         """ Transpile TestCircuit with provided pass_manager and register statistics, but do not execute.
 
         Args:
@@ -486,6 +490,9 @@ class TestCircuit:
                 self.compiled_circ as a side-effect.
         """
 
+        if default_be is None:
+            default_be = _preferred_backend
+
         if self.backend is None:
             logger.warning(f'Transpiler: Circuit ({self.id}) had no backend.  Resorted to default: {_preferred_backend}')
             self.backend = default_be
@@ -496,7 +503,7 @@ class TestCircuit:
         for i in range(ATTEMPTS):
             start_time = time.process_time()
             self.compiled_circ = transpile(self.circuit,
-                                           backend=self.get_circ_backend(),
+                                           backend=self.get_circ_backend(default_backend=default_be),
                                            optimization_level=0,
                                            pass_manager=pass_manager)
             transpile_times.append(time.process_time() - start_time)
@@ -542,7 +549,7 @@ class TestCircuit:
         dbc.write_objects(dbc.db_location, [self])
         dbc.insert_in_progress(dbc.db_location, [self])
 
-    def get_circ_backend(self, hub: str = 'ibm-q-afrl', default_backend=_preferred_backend) -> basebackend:
+    def get_circ_backend(self, hub: str = 'ibm-q-afrl', default_backend=None) -> basebackend:
         """ Helper function to map a backend's string ID to its object.
 
         Args:
@@ -552,6 +559,10 @@ class TestCircuit:
         Returns:
             qiskit.providers.ibmq.ibmqbackend.IBMQBackend:
         """
+
+        if default_backend is None:
+            default_backed = _preferred_backend
+
         default_backend = self.backend if self.backend is not None else default_backend
         return IBMQ.get_provider(hub=hub).get_backend(default_backend)
 

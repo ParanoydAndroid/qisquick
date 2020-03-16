@@ -1,3 +1,4 @@
+import os
 import pickle
 import sqlite3
 import traceback
@@ -391,19 +392,22 @@ def create_all_tables(db: str = db_location) -> None:
     );'''
 
     # Creating a connection object to db_location will create a db file if none exists.
+
+    try:
+        os.makedirs(os.path.dirname(db))
+
+    except FileExistsError:
+        logger.info('Directories already exist, continuing.')
+
     try:
         logger.info(f'Connecting to db file (creating if it does not exist...)')
-        with sqlite3.connect(db_location) as conn:
-            logger.info(f'Creating Circs table ...')
+        with sqlite3.connect(db) as conn:
+            logger.info(f'Creating all tables if they don\'t exist ...')
             conn.execute(create_circs)
-            logger.info(f'Circs table created!')
-            logger.info(f'Creating Running table ...')
             conn.execute(create_running)
             conn.execute(create_running_index)
-            logger.info(f'Running table created!')
-            logger.info(f'Creating Stats table ...')
             conn.execute(create_stats)
-            logger.info(f'Stats table created!')
+            logger.info(f'Table checks done!')
 
     except sqlite3.DatabaseError:
         msg = f'Error creating db tables for db at {db_location}'

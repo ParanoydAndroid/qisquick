@@ -13,25 +13,25 @@ from qisquick import dbconfig as dbc
 from qisquick.circuits import Premades, TestCircuit
 from qisquick.qis_logger import config_logger, get_module_logger
 
-PREFERRED_PROVIDER = 'ibm-q'
-PREFERRED_BACKEND = 'ibmq_16_melbourne'
+PREFERRED_PROVIDER_NAME = 'ibm-q'
+PREFERRED_BACKEND_NAME = 'ibmq_16_melbourne'
 
 # Can't define the logger up front because we have to define the verbosity level first.
 logger = None
-_backend = None
+PREFERRED_BACKEND = None
 
 """ Driver module for qisquick.  Handles basic startup, configuration, and running experiments.
 
     Args (globals):
-        PREFERRED_PROVIDER (str): id specifying the provider used by qisquick, if none other is provided.  Defaults
+        PREFERRED_PROVIDER_NAME (str): id specifying the provider used by qisquick, if none other is provided.  Defaults
             to 'ibm-q'.  Eligible IDs are found by calling IBMQ.get_providers() and can be passed via the backend param 
             of run_experiment.
-        PREFERRED_BACKEND (str): id specifying the default backend used by qisquick, if none other is provided.
+        PREFERRED_BACKEND_NAME (str): id specifying the default backend used by qisquick, if none other is provided.
             Defaults to 'ibmq_16_melbourne'.  Eligible backends can be found by calling [provider].backends() and can
             be passed via the backend param of run_experiment.
         logger (Logger): Module-level logger used to determine log message format and define its source.
-        _backend (Basebackend): backend object provided for quick access.  Determined by calling 
-            [provider].get_backend(PREFERRED_BACKEND).
+        PREFERRED_BACKEND (Basebackend): backend object provided for quick access.  Determined by calling 
+            [provider].get_backend(PREFERRED_BACKEND_NAME).
 """
 
 
@@ -51,8 +51,8 @@ def main(argv):
     _execute(run_local_experiment, check=check_only, run_only=run_only, verbosity=verbosity)
 
 
-def run_experiment(experiment: Callable, db_location: str = None, provider: str = None, backend: str = None, **kwargs) \
-        -> None:
+def run_experiment(experiment: Callable, db_location: str = None, provider: str = None,
+                   backend: str = PREFERRED_BACKEND_NAME, **kwargs) -> None:
     """ Function provided for run_experiment.py imports into other systems.  This can be called with a user
         defined experiment script and will perform the same tasks as if main() was called on that function
 
@@ -62,23 +62,22 @@ def run_experiment(experiment: Callable, db_location: str = None, provider: str 
             Defaults to data/circuit_data.sqlite
         provider (str): Optional. String reference used to retrieve provider object.  Defaults to ibm-q
         backend (str): Optional. String reference used to retrieve backend. Defaults to ibmq_16_melbourne
-        kwargs: Dictionary of arguments corresponding to those defined by the get_cli_args function in this module.
+        kwargs: Dictionary of arguments corresponding to those defined by the _get_cli_args function in this module.
 
 
     Returns: None.  But as a side-effect will write to the Circs and Stats tables at db_location.
     """
-
-    _pre_process(provider, backend)
-    dbc.set_db_location(db_location)
-    dbc.create_all_tables(dbc.db_location)
-
     verbosity = kwargs['verbosity'] if 'verbosity' in kwargs.keys() else None
     _get_logger(verbosity)
 
     check_only = kwargs['check_only'] if 'check_only' in kwargs.keys() else False
     run_only = kwargs['run_only'] if 'run_only' in kwargs.keys() else False
 
-    _execute(experiment, check=check_only, run_only=run_only)
+    _pre_process(provider, backend)
+    dbc.set_db_location(db_location)
+    dbc.create_all_tables(dbc.db_location)
+
+    _execute(experiment, check_only=check_only, run_only=run_only)
 
 
 def run_local_experiment() -> List[str]:
@@ -151,13 +150,13 @@ def run_local_experiment() -> List[str]:
 
             # Start by getting a transpiler config from the circuits and backend
             level = 1 if pass_configurations[test_config[0]] != 'IBM Optimized' else 3
-            configs = transpilertools.get_transpiler_config(circs=tests, be=_backend, optimization_level=level)
+            configs = transpilertools.get_transpiler_config(circs=tests, be=PREFERRED_BACKEND, optimization_level=level)
 
             # Then we use the configs to get the appropriate PassManager for each configuration
             pms = []
             for idx, config in enumerate(configs):
                 pm = transpilertools.get_basic_pm(config, level=level)
-                cm = CouplingMap(_backend.configuration().coupling_map)
+                cm = CouplingMap(PREFERRED_BACKEND.configuration().coupling_map)
 
                 if test_config[1] == 1:
                     pass_type = 'swap'
@@ -165,7 +164,7 @@ def run_local_experiment() -> List[str]:
 
                 elif test_config[1] == 2:
                     pass_type = 'layout'
-                    new_pass = DenseLayout(coupling_map=cm, backend_prop=_backend.properties())
+                    new_pass = DenseLayout(coupling_map=cm, backend_prop=PREFERRED_BACKEND.properties())
 
                 else:
                     modified_pm = pm
@@ -186,7 +185,7 @@ def run_local_experiment() -> List[str]:
             pms_batches = get_batches(pms)
             assert len(test_batches) == len(pms_batches)
             for test_batch, pms_batch in zip(test_batches, pms_batches):
-                TestCircuit.run_all_tests(test_batch, pass_manager=pms_batch, be=PREFERRED_BACKEND, attempts=5)
+                TestCircuit.run_all_tests(test_batch, pass_manager=pms_batch, be=PREFERRED_BACKEND_NAME, attempts=5)
 
             # ************************** Phase 4: Return final circ ids so the normal routine can save them to Stats
             tests_all_ids.extend([test.id for test in tests])
@@ -202,11 +201,15 @@ def _execute(experiment: Callable, **kwargs):
     Args:
         experiment (Callable): Experiment to execute.  The provided experiment should accept no arguments and should
             return a list of database IDs to check for circuit execution completion.
-        kwargs: Dictionary of arguments corresponding to those defined by the get_cli_args function in this module.
+        kwargs: Dictionary of arguments corresponding to those defined by the _get_cli_args function in this module.
 
     Returns:
         None
         """
+
+    global logger
+
+    logger = get_module_logger(__name__)
 
     run_once = True
 
@@ -345,7 +348,7 @@ def create_all(size: int = 4, truth_value: int = 5, seed: int = None, filename: 
     return circs
 
 
-def get_cli_args():
+def _get_cli_args():
     """ Uses argparse to parse arguments when this module is called directly.  If being imported, these same
         flags can be passed as named parameters to the run_experinment() function call.  Keys are described below:
 
@@ -371,16 +374,16 @@ def get_cli_args():
 
 
 def _pre_process(default_provider: str = None, default_backend: str = None):
-    global PREFERRED_PROVIDER, PREFERRED_BACKEND,_backend
+    global PREFERRED_PROVIDER_NAME, PREFERRED_BACKEND_NAME, PREFERRED_BACKEND
 
-    PREFERRED_BACKEND = default_backend if default_backend is not None else PREFERRED_BACKEND
-    PREFERRED_PROVIDER = default_provider if default_provider is not None else PREFERRED_PROVIDER
+    PREFERRED_BACKEND_NAME = default_backend if default_backend is not None else PREFERRED_BACKEND_NAME
+    PREFERRED_PROVIDER_NAME = default_provider if default_provider is not None else PREFERRED_PROVIDER_NAME
 
     # Write global over to TestCircuit
-    qqc._preferred_backend = PREFERRED_BACKEND
+    qqc._preferred_backend = PREFERRED_BACKEND_NAME
     IBMQ.load_account()
-    provider = IBMQ.get_provider(PREFERRED_PROVIDER)
-    _backend = provider.get_backend(PREFERRED_BACKEND)
+    provider = IBMQ.get_provider(PREFERRED_PROVIDER_NAME)
+    PREFERRED_BACKEND = provider.get_backend(PREFERRED_BACKEND_NAME)
 
     return
 
@@ -407,6 +410,6 @@ def _get_logger(verbosity: int) -> None:
 
 if __name__ == '__main__':
     _pre_process()
-    args = get_cli_args()
+    args = _get_cli_args()
     _get_logger(args.verbose)
     main(args)
