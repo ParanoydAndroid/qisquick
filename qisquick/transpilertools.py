@@ -82,6 +82,8 @@ def get_basic_pm(transpiler_config: TranspileConfig, level: int = 0) -> PassMana
     Returns:
         PassManager: PassManager instance associated with the provided config.
     """
+
+    # TODO Add pm to stats and db
     pm_funcs = {
         0: level_0_pass_manager,
         1: level_1_pass_manager,
@@ -105,6 +107,8 @@ def get_modified_pm(pass_manager: PassManager, version: int, pass_type: str, new
     Returns:
         qiskit.transpiler.passmanager.PassManager: Modified PassManager instance.
     """
+
+    # TODO add pms to stats and db
 
     if version not in range(4):
         raise ValueError(f'version must correspond to an existing optimization level (range(4)).  Got {version}')

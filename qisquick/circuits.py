@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import math
 import random
 import time
@@ -62,6 +63,7 @@ class Premades(QuantumCircuit):
     def two_bell(self) -> None:
         size = self.circ_size
         random.seed(self.seed)
+        np.random.seed(self.seed)
 
         if size % 2 != 0:
             # TODO just change this to allow odd qubits
@@ -494,18 +496,21 @@ class TestCircuit:
             default_be = _preferred_backend
 
         if self.backend is None:
-            logger.warning(f'Transpiler: Circuit ({self.id}) had no backend.  Resorted to default: {_preferred_backend}')
+            logger.warning(
+                f'Transpiler: Circuit ({self.id}) had no backend.  Resorted to default: {_preferred_backend}')
             self.backend = default_be
 
         transpile_times = []
 
         # Get the average transpile time over ATTEMPTS number of trials
         for i in range(ATTEMPTS):
+            circ_copy = copy.deepcopy(self.circuit)
+            pm_copy = copy.deepcopy(pass_manager)
             start_time = time.process_time()
-            self.compiled_circ = transpile(self.circuit,
+            self.compiled_circ = transpile(circ_copy,
                                            backend=self.get_circ_backend(default_backend=default_be),
                                            optimization_level=0,
-                                           pass_manager=pass_manager)
+                                           pass_manager=pm_copy)
             transpile_times.append(time.process_time() - start_time)
 
         tc: QuantumCircuit = self.compiled_circ
