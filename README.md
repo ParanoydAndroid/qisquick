@@ -112,6 +112,16 @@ Once the researcher has an experiment they'd like to run, this can be handled ve
         
     If no backend and provider are provided, the library defaults are the public ibm-q provider and the public melbourne backend.  Researchers can also pass a custom dblocation -- to create the db or reference an existing sqlite3 db of the correct structure.  If no dblocation is provided, one is created at data/circuit_data.sqlite  
  
+## Tips and Tricks
+
+* Import and use the `PREFERRED_BACKEND` global and the `get_batches` function from `run_experiment`.  PREFERRED_BACKEND
+has a default set and can be changed by passing the preferred provider and preferred backend parameters to 
+`run_experiment`.  This way, changing one parameter can replicate backend changes throughout your entire experiment.
+
+    'get_batches' is a utility function to to automate sending jobs to the IBM backends in polite chunk sizes.
+
+* Best practice is to avoid making your own db.  The library will automatically create one in your CWD/Data with the
+appropriate tables and fields.
 
 
 
